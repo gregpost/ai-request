@@ -16,38 +16,47 @@ actions = config["constant_loop"]
 
 # Clone repo if not exists
 if not os.path.exists(repo_cfg["local_path"]):
-    print("Cloning repo...")
+    print(f"[INFO] Cloning repo '{repo_cfg['name']}' from {repo_cfg['url']}...")
     Repo.clone_from(repo_cfg["url"], repo_cfg["local_path"])
+    print(f"[INFO] Repo cloned successfully at {repo_cfg['local_path']}")
 
 repo = Repo(repo_cfg["local_path"])
 last_commit = repo.head.commit.hexsha
 
 def git_pull():
     global last_commit
+    print("[INFO] Pulling latest changes from repo...")
     repo.remotes.origin.pull()
     new_commit = repo.head.commit.hexsha
     if new_commit != last_commit:
-        print("New commit detected:", new_commit)
+        print(f"[INFO] New commit detected: {new_commit}")
         last_commit = new_commit
         # Copy request file to clipboard
         file_path = os.path.join(repo_cfg["local_path"], request_file)
         if os.path.exists(file_path):
             with open(file_path, "r", encoding="utf-8") as f:
                 pyperclip.copy(f.read())
+            print(f"[INFO] Copied '{request_file}' to clipboard")
+        else:
+            print(f"[WARNING] Request file '{request_file}' not found")
 
 def git_push():
+    print("[INFO] Starting git push...")
     repo.remotes.origin.push()
-    print("Pushed changes to remote repo")
+    print("[INFO] Git push completed successfully")
 
 def press_keys(step):
     keys = step.get("keys", [])
     wait_sec = step.get("wait_sec", 0)
     press_enter = step.get("press_enter", False)
     if keys:
+        print(f"[INFO] Pressing keys: {keys}")
         pyautogui.hotkey(*keys)
     if wait_sec > 0:
+        print(f"[INFO] Waiting {wait_sec} seconds")
         time.sleep(wait_sec)
     if press_enter:
+        print("[INFO] Pressing Enter key")
         pyautogui.press("enter")
 
 def wait_sec(step):
@@ -55,13 +64,16 @@ def wait_sec(step):
     if isinstance(step, dict):
         sec = step.get("wait_sec", 0)
     if sec > 0:
+        print(f"[INFO] Waiting {sec} seconds")
         time.sleep(sec)
 
 def mouse_click(coord):
+    print(f"[INFO] Moving mouse to {coord} and clicking")
     pyautogui.moveTo(*coord)
     pyautogui.click()
 
 def mouse_move_click(coord):
+    print(f"[INFO] Moving mouse to {coord} and clicking")
     pyautogui.moveTo(*coord)
     pyautogui.click()
 
@@ -69,8 +81,10 @@ def write_clipboard_to_file(filename):
     file_path = os.path.join(repo_cfg["local_path"], filename)
     with open(file_path, "w", encoding="utf-8") as f:
         f.write(pyperclip.paste())
+    print(f"[INFO] Written clipboard content to '{filename}'")
     repo.index.add([filename])
     repo.index.commit(f"Update {filename} from clipboard")
+    print(f"[INFO] Committed '{filename}' to local repo")
     git_push()
 
 # Execute loop
@@ -92,4 +106,5 @@ while True:
             elif "write_clipboard_to_file" in step:
                 write_clipboard_to_file(step["write_clipboard_to_file"])
         elif isinstance(step, int) or isinstance(step, float):
+            print(f"[INFO] Waiting {step} seconds")
             time.sleep(step)
