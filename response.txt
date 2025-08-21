@@ -1,1 +1,95 @@
-
+import os
+import time
+import pyautogui
+import pyperclip
+import yaml
+from git import Repo
+
+# Load YAML config
+with open("config.yaml", "r") as f:
+    config = yaml.safe_load(f)
+
+repo_cfg = config["repo"]
+request_file = repo_cfg["request"]
+response_file = repo_cfg["response"]
+actions = config["constant_loop"]
+
+# Clone repo if not exists
+if not os.path.exists(repo_cfg["local_path"]):
+    print("Cloning repo...")
+    Repo.clone_from(repo_cfg["url"], repo_cfg["local_path"])
+
+repo = Repo(repo_cfg["local_path"])
+last_commit = repo.head.commit.hexsha
+
+def git_pull():
+    global last_commit
+    repo.remotes.origin.pull()
+    new_commit = repo.head.commit.hexsha
+    if new_commit != last_commit:
+        print("New commit detected:", new_commit)
+        last_commit = new_commit
+        # Copy request file to clipboard
+        file_path = os.path.join(repo_cfg["local_path"], request_file)
+        if os.path.exists(file_path):
+            with open(file_path, "r", encoding="utf-8") as f:
+                pyperclip.copy(f.read())
+
+def git_push():
+    repo.remotes.origin.push()
+    print("Pushed changes to remote repo")
+
+def press_keys(step):
+    keys = step.get("keys", [])
+    wait_sec = step.get("wait_sec", 0)
+    press_enter = step.get("press_enter", False)
+    if keys:
+        pyautogui.hotkey(*keys)
+    if wait_sec > 0:
+        time.sleep(wait_sec)
+    if press_enter:
+        pyautogui.press("enter")
+
+def wait_sec(step):
+    sec = step
+    if isinstance(step, dict):
+        sec = step.get("wait_sec", 0)
+    if sec > 0:
+        time.sleep(sec)
+
+def mouse_click(coord):
+    pyautogui.moveTo(*coord)
+    pyautogui.click()
+
+def mouse_move_click(coord):
+    pyautogui.moveTo(*coord)
+    pyautogui.click()
+
+def write_clipboard_to_file(filename):
+    file_path = os.path.join(repo_cfg["local_path"], filename)
+    with open(file_path, "w", encoding="utf-8") as f:
+        f.write(pyperclip.paste())
+    repo.index.add([filename])
+    repo.index.commit(f"Update {filename} from clipboard")
+    git_push()
+
+# Execute loop
+while True:
+    for step in actions:
+        if isinstance(step, dict):
+            if "git_pull" in step and step["git_pull"]:
+                git_pull()
+            elif "git_push" in step and step["git_push"]:
+                git_push()
+            elif "press_keys" in step:
+                press_keys(step["press_keys"])
+            elif "wait_sec" in step:
+                wait_sec(step)
+            elif "mouse_click" in step:
+                mouse_click(step["mouse_click"])
+            elif "mouse_move_click" in step:
+                mouse_move_click(step["mouse_move_click"])
+            elif "write_clipboard_to_file" in step:
+                write_clipboard_to_file(step["write_clipboard_to_file"])
+        elif isinstance(step, int) or isinstance(step, float):
+            time.sleep(step)
