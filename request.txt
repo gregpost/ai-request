@@ -1,0 +1,109 @@
+import os
+import time
+import pyautogui
+import pyperclip
+import yaml
+from git import Repo
+from datetime import datetime
+
+# --- Helper function for logging ---
+def log(msg):
+    print(f"[{datetime.now().strftime('%H:%M:%S')}] {msg}")
+
+# --- Load YAML config ---
+with open("config.yaml", "r") as f:
+    config = yaml.safe_load(f)
+
+repo_cfg = config["repo"]
+request_file = repo_cfg["request"]
+response_file = repo_cfg["response"]
+actions = config["constant_loop"]
+
+# --- Clone repo if not exists ---
+if not os.path.exists(repo_cfg["local_path"]):
+    log(f"Cloning repo '{repo_cfg['name']}' from {repo_cfg['url']}...")
+    Repo.clone_from(repo_cfg["url"], repo_cfg["local_path"])
+    log(f"Repo cloned successfully at {repo_cfg['local_path']}")
+
+repo = Repo(repo_cfg["local_path"])
+last_commit = repo.head.commit.hexsha
+
+# --- Git operations ---
+def git_pull():
+    global last_commit
+    log("Pulling latest changes from repo...")
+    repo.remotes.origin.pull()
+    new_commit = repo.head.commit.hexsha
+    if new_commit != last_commit:
+        log(f"New commit detected: {new_commit}")
+        last_commit = new_commit
+
+def git_push():
+    log("Starting git push...")
+    repo.remotes.origin.push()
+    log("Git push completed successfully")
+
+# --- Keyboard and mouse ---
+def press_keys(keys):
+    if isinstance(keys, str) and keys.lower() == "enter":
+        log("Pressing Enter key")
+        pyautogui.press("enter")
+    elif isinstance(keys, list):
+        log(f"Pressing keys: {keys}")
+        pyautogui.hotkey(*keys)
+
+def wait(seconds):
+    log(f"Waiting {seconds} seconds")
+    time.sleep(seconds)
+
+def mouse_click(coord):
+    log(f"Moving mouse to {coord} and clicking")
+    pyautogui.moveTo(*coord)
+    pyautogui.click()
+
+def mouse_move_click(coord):
+    log(f"Moving mouse to {coord} and clicking")
+    pyautogui.moveTo(*coord)
+    pyautogui.click()
+
+# --- Clipboard/file operations ---
+def write_clipboard_to_file(filename):
+    file_path = os.path.join(repo_cfg["local_path"], filename)
+    with open(file_path, "w", encoding="utf-8") as f:
+        f.write(pyperclip.paste())
+    log(f"Written clipboard content to '{filename}'")
+    repo.index.add([filename])
+    repo.index.commit(f"Update {filename} from clipboard")
+    log(f"Committed '{filename}' to local repo")
+    git_push()
+
+def write_file_to_clipboard(filename, max_chars=None, max_lines=None):
+    """Copy part of a file to clipboard (by characters or lines)"""
+    file_path = os.path.join(repo_cfg["local_path"], filename)
+    if not os.path.exists(file_path):
+        log(f"WARNING: File '{filename}' not found")
+        return
+
+    with open(file_path, "r", encoding="utf-8") as f:
+        if max_chars:
+            content = f.read(max_chars)
+        elif max_lines:
+            lines = f.readlines()
+            content = "".join(lines[:max_lines])
+        else:
+            content = f.read()
+
+    pyperclip.copy(content)
+    log(f"Copied content of '{filename}' to clipboard ({'first '+str(max_chars)+' chars' if max_chars else 'first '+str(max_lines)+' lines' if max_lines else 'all'})")
+
+# --- Main loop ---
+while True:
+    for step in actions:
+        key, value = next(iter(step.items()))
+        if key == "git_pull" and value:
+            git_pull()
+        elif key == "git_push" and value:
+            git_push()
+        elif key == "press":
+            press_keys(value)
+        elif key
