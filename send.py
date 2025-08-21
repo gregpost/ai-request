@@ -23,6 +23,7 @@ if not os.path.exists(repo_cfg["local_path"]):
 repo = Repo(repo_cfg["local_path"])
 last_commit = repo.head.commit.hexsha
 
+# Git operations
 def git_pull():
     global last_commit
     print("[INFO] Pulling latest changes from repo...")
@@ -37,6 +38,7 @@ def git_push():
     repo.remotes.origin.push()
     print("[INFO] Git push completed successfully")
 
+# Keyboard and mouse
 def press_keys(keys):
     if isinstance(keys, str) and keys.lower() == "enter":
         print("[INFO] Pressing Enter key")
@@ -59,6 +61,7 @@ def mouse_move_click(coord):
     pyautogui.moveTo(*coord)
     pyautogui.click()
 
+# Clipboard/file operations
 def write_clipboard_to_file(filename):
     file_path = os.path.join(repo_cfg["local_path"], filename)
     with open(file_path, "w", encoding="utf-8") as f:
@@ -69,15 +72,42 @@ def write_clipboard_to_file(filename):
     print(f"[INFO] Committed '{filename}' to local repo")
     git_push()
 
-def write_file_to_clipboard(filename):
-    """Read a file from repo and copy its content to the clipboard"""
+def write_file_to_clipboard(filename, max_chars=None, max_lines=None):
+    """Read a file from repo and copy part or all of its content to clipboard"""
     file_path = os.path.join(repo_cfg["local_path"], filename)
-    if os.path.exists(file_path):
-        with open(file_path, "r", encoding="utf-8") as f:
-            pyperclip.copy(f.read())
-        print(f"[INFO] Copied content of '{filename}' to clipboard")
-    else:
+    if not os.path.exists(file_path):
         print(f"[WARNING] File '{filename}' not found")
+        return
+    with open(file_path, "r", encoding="utf-8") as f:
+        if max_chars:
+            content = f.read(max_chars)
+        elif max_lines:
+            content = "".join(f.readlines()[:max_lines])
+        else:
+            content = f.read()
+    pyperclip.copy(content)
+    print(f"[INFO] Copied content of '{filename}' to clipboard")
+
+def wait_in_clipboard(target_string):
+    """Wait infinitely until target_string appears in clipboard"""
+    print(f"[INFO] Waiting for '{target_string}' to appear in clipboard...")
+    while target_string not in pyperclip.paste():
+        time.sleep(1)
+    print(f"[INFO] Found '{target_string}' in clipboard. Continuing...")
+
+def clear_clipboard():
+    """Clear the system clipboard"""
+    pyperclip.copy("")
+    print("[INFO] Clipboard cleared")
+
+def click_while_not_in_clipboard(substr, position, wait_sec=1):
+    """Click on the given position until substr appears in the clipboard"""
+    print(f"[INFO] Clicking at {position} until '{substr}' appears in clipboard...")
+    while substr not in pyperclip.paste():
+        pyautogui.moveTo(*position)
+        pyautogui.click()
+        time.sleep(wait_sec)
+    print(f"[INFO] Found '{substr}' in clipboard. Stopping clicks.")
 
 # Main loop
 while True:
@@ -99,3 +129,12 @@ while True:
             write_clipboard_to_file(value)
         elif key == "write_file_to_clipboard":
             write_file_to_clipboard(value)
+        elif key == "wait_in_clipboard":
+            wait_in_clipboard(value)
+        elif key == "clear_clipboard" and value:
+            clear_clipboard()
+        elif key == "click_while_not_in_clipboard":
+            substr = value["substr"]
+            position = value["position"]
+            wait_sec = value.get("wait_sec", 1)
+            click_while_not_in_clipboard(substr, position, wait_sec)

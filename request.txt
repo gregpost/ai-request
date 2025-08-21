@@ -1,2 +1,3 @@
 Create a JavaScript frontend that displays the prices of different blockchains and updates them every second via an API.
 Add ``` to the start and the end of the file.
+Add <<<END>>> to the end of ``` block
