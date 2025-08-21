@@ -19,4 +19,30 @@
         <th>Price (USD)</th>
       </tr>
     </thead>
-    <tbo
+    <tbody></tbody>
+  </table>
+
+  <script>
+    const blockchains = ["bitcoin", "ethereum", "cardano", "solana"];
+
+    async function fetchPrices() {
+      try {
+        const ids = blockchains.join(",");
+        const response = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${ids}&vs_currencies=usd`);
+        const data = await response.json();
+        updateTable(data);
+      } catch (err) {
+        console.error("Error fetching prices:", err);
+      }
+    }
+
+    function updateTable(data) {
+      const tbody = document.querySelector("#priceTable tbody");
+      tbody.innerHTML = "";
+      blockchains.forEach(chain => {
+        const row = document.createElement("tr");
+        const nameCell = document.createElement("td");
+        nameCell.textContent = chain.charAt(0).toUpperCase() + chain.slice(1);
+        const priceCell = document.createElement("td");
+        priceCell.textContent = data[chain]?.usd ? `$${data[chain].usd}` : "N/A";
+        row.
