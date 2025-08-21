@@ -1,2 +1,70 @@
-Create a JavaScript frontend that displays the prices of different blockchains and updates them every second via an API.
-Add ``` to the start and the end of the file.
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Blockchain Prices</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; }
+    table { border-collapse: collapse; width: 50%; }
+    th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
+    th { background-color: #f4f4f4; }
+  </style>
+</head>
+<body>
+  <h1>Blockchain Prices</h1>
+  <table id="priceTable">
+    <thead>
+      <tr>
+        <th>Blockchain</th>
+        <th>Price (USD)</th>
+      </tr>
+    </thead>
+    <tbody>
+      <!-- Price rows will appear here -->
+    </tbody>
+  </table>
+
+  <script>
+    // List of blockchains to track
+    const blockchains = ["bitcoin", "ethereum", "cardano", "solana"];
+
+    // Function to fetch prices
+    async function fetchPrices() {
+      try {
+        const ids = blockchains.join(",");
+        const response = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${ids}&vs_currencies=usd`);
+        const data = await response.json();
+        updateTable(data);
+      } catch (err) {
+        console.error("Error fetching prices:", err);
+      }
+    }
+
+    // Function to update HTML table
+    function updateTable(data) {
+      const tbody = document.querySelector("#priceTable tbody");
+      tbody.innerHTML = ""; // Clear previous rows
+
+      blockchains.forEach(chain => {
+        const row = document.createElement("tr");
+
+        const nameCell = document.createElement("td");
+        nameCell.textContent = chain.charAt(0).toUpperCase() + chain.slice(1);
+
+        const priceCell = document.createElement("td");
+        priceCell.textContent = data[chain]?.usd ? `$${data[chain].usd}` : "N/A";
+
+        row.appendChild(nameCell);
+        row.appendChild(priceCell);
+        tbody.appendChild(row);
+      });
+    }
+
+    // Initial fetch
+    fetchPrices();
+
+    // Refresh every 1 second
+    setInterval(fetchPrices, 1000);
+  </script>
+</body>
+</html>
