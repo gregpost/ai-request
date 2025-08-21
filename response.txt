@@ -1,3 +1,16 @@
-Create a JavaScript frontend that displays the prices of different blockchains and updates them every second via an API.
-Add ``` to the start and the end of the file.
-Add <<<END>>> to the end of ``` block
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Blockchain Prices</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; }
+    table { border-collapse: collapse; width: 50%; }
+    th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
+    th { background-color: #f4f4f4; }
+  </style>
+</head>
+<body>
+  <h1>Blockchain Prices</h1>
+  <table id="priceTable">
+    <thead
